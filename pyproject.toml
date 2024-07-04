@@ -2,15 +2,40 @@
 name = "pydantic-file-settings"
 version = "0.0.1"
 description = "Manage your application settings with Pydantic models, storing them in JSON file."
-authors = [
-    { name = "Ruslan Iskov", email = "ruslan.rv.ua@gmail.com" }
-]
+authors = [{ name = "Ruslan Iskov", email = "ruslan.rv.ua@gmail.com" }]
 license = "MIT"
 readme = "README.md"
-dependencies = [
-    "pydantic-settings>=2.3.4",
-]
 requires-python = ">= 3.8"
+keywords = [
+    "pydantic",
+    "settings",
+    "configuration",
+    "json",
+    "file-based",
+    "file",
+    "json",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = ["pydantic-settings>=2.3.4"]
+
+[project.urls]
+Homepage = "https://github.com/ruslan-rv-ua/pydantic-file-settings"
+Documentation = "https://github.com/ruslan-rv-ua/pydantic-file-settings#readme"
+Repository = "https://github.com/ruslan-rv-ua/pydantic-file-settings.git"
+"Bug Tracker" = "https://github.com/ruslan-rv-ua/pydantic-file-settings/issues"
+
 
 [build-system]
 requires = ["hatchling"]
@@ -25,3 +50,13 @@ allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pydantic_file_settings"]
+
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/.github",
+    "/docs",
+    "/tests",
+    "/.gitignore",
+    "/.pre-commit-config.yaml",
+]
