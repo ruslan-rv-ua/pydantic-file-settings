@@ -328,6 +328,195 @@ class TestEdgeCases:
         assert settings._settings_dir == tmp_path.resolve()
 
 
+class TestRelativePaths:
+    """Tests for relative path arguments."""
+
+    def test_exists_with_relative_path(self, tmp_path: Path, monkeypatch) -> None:
+        """Test exists() with relative path like './config'."""
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        monkeypatch.chdir(tmp_path)
+
+        SimpleSettings.create(config_dir)
+
+        assert SimpleSettings.exists("./config") is True
+        assert SimpleSettings.exists("config") is True
+
+    def test_exists_with_relative_path_not_found(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        """Test exists() returns False for relative path when file doesn't exist."""
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        monkeypatch.chdir(tmp_path)
+
+        assert SimpleSettings.exists("./config") is False
+
+    def test_create_with_relative_path(self, tmp_path: Path, monkeypatch) -> None:
+        """Test create() with relative path like './config'."""
+        monkeypatch.chdir(tmp_path)
+
+        settings = SimpleSettings.create("./config")
+
+        assert settings.name == "default"
+        assert (tmp_path / "config" / "settings.json").exists()
+        # _settings_dir should be resolved to absolute path
+        assert settings._settings_dir == (tmp_path / "config").resolve()
+
+    def test_create_with_relative_nested_path(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        """Test create() with nested relative path."""
+        monkeypatch.chdir(tmp_path)
+
+        settings = SimpleSettings.create("./deep/nested/config")
+
+        assert (tmp_path / "deep" / "nested" / "config" / "settings.json").exists()
+        assert settings._settings_dir == (tmp_path / "deep/nested/config").resolve()
+
+    def test_load_with_relative_path(self, tmp_path: Path, monkeypatch) -> None:
+        """Test load() with relative path like './config'."""
+        config_dir = tmp_path / "config"
+        monkeypatch.chdir(tmp_path)
+        SimpleSettings.create(config_dir)
+
+        settings = SimpleSettings.load("./config")
+
+        assert settings.name == "default"
+        assert settings._settings_dir == config_dir.resolve()
+
+    def test_load_with_dot_dot_path(self, tmp_path: Path, monkeypatch) -> None:
+        """Test load() with parent directory reference '../'."""
+        config_dir = tmp_path / "config"
+        subdir = tmp_path / "subdir"
+        subdir.mkdir()
+        SimpleSettings.create(config_dir)
+        monkeypatch.chdir(subdir)
+
+        settings = SimpleSettings.load("../config")
+
+        assert settings.name == "default"
+        assert settings._settings_dir == config_dir.resolve()
+
+    def test_save_preserves_relative_path_resolution(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        """Test that save() works correctly after create with relative path."""
+        monkeypatch.chdir(tmp_path)
+
+        settings = SimpleSettings.create("./config")
+        settings.name = "modified"
+        settings.save()
+
+        # Change working directory and verify file is still accessible
+        monkeypatch.chdir(tmp_path / "config")
+        loaded = SimpleSettings.load(tmp_path / "config")
+        assert loaded.name == "modified"
+
+
+class TestRequiredFields:
+    """Tests for fields without default values."""
+
+    def test_create_with_required_fields_uses_model_defaults(
+        self, tmp_path: Path
+    ) -> None:
+        """Test that create() fails for settings with required fields."""
+
+        class RequiredSettings(FileSettings):
+            required_name: str
+            optional_count: int = 0
+
+        with pytest.raises(ValidationError) as exc_info:
+            RequiredSettings.create(tmp_path)
+
+        assert "required_name" in str(exc_info.value)
+
+    def test_load_missing_required_field_raises_error(self, tmp_path: Path) -> None:
+        """Test that load() raises error when required field is missing."""
+
+        class RequiredSettings(FileSettings):
+            required_name: str
+            optional_count: int = 0
+
+        # Create JSON without required field
+        (tmp_path / "settings.json").write_text(
+            json.dumps({"optional_count": 5}), encoding="utf8"
+        )
+
+        with pytest.raises(ValueError) as exc_info:
+            RequiredSettings.load(tmp_path)
+
+        assert "required_name" in str(exc_info.value)
+
+    def test_load_with_all_required_fields_works(self, tmp_path: Path) -> None:
+        """Test that load() works when all required fields are present."""
+
+        class RequiredSettings(FileSettings):
+            required_name: str
+            required_count: int
+
+        settings_data = {"required_name": "test", "required_count": 42}
+        (tmp_path / "settings.json").write_text(
+            json.dumps(settings_data), encoding="utf8"
+        )
+
+        settings = RequiredSettings.load(tmp_path)
+
+        assert settings.required_name == "test"
+        assert settings.required_count == 42
+
+    def test_load_with_mixed_required_and_optional_fields(
+        self, tmp_path: Path
+    ) -> None:
+        """Test load() with both required and optional fields."""
+
+        class MixedSettings(FileSettings):
+            required_field: str
+            optional_field: int = 100
+
+        settings_data = {"required_field": "value"}
+        (tmp_path / "settings.json").write_text(
+            json.dumps(settings_data), encoding="utf8"
+        )
+
+        settings = MixedSettings.load(tmp_path)
+
+        assert settings.required_field == "value"
+        assert settings.optional_field == 100  # Default value
+
+    def test_load_create_if_missing_with_required_fields_fails(
+        self, tmp_path: Path
+    ) -> None:
+        """Test that load with create_if_missing fails for required fields."""
+
+        class RequiredSettings(FileSettings):
+            required_name: str
+
+        with pytest.raises(ValidationError) as exc_info:
+            RequiredSettings.load(tmp_path, create_if_missing=True)
+
+        assert "required_name" in str(exc_info.value)
+
+    def test_multiple_required_fields_validation(self, tmp_path: Path) -> None:
+        """Test validation with multiple required fields."""
+
+        class MultiRequiredSettings(FileSettings):
+            name: str
+            age: int
+            email: str
+
+        # Missing all required fields
+        (tmp_path / "settings.json").write_text("{}", encoding="utf8")
+
+        with pytest.raises(ValueError) as exc_info:
+            MultiRequiredSettings.load(tmp_path)
+
+        error_msg = str(exc_info.value)
+        assert "name" in error_msg
+        assert "age" in error_msg
+        assert "email" in error_msg
+
+
 class TestModuleExports:
     """Tests for module exports."""
 
