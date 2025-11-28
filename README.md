@@ -11,7 +11,6 @@ Manage your application settings with Pydantic models, storing them in a JSON fi
 - 🚀 Easy to use: Extend from `FileSettings` and you're good to go!
 - 🔒 Type-safe: Leverage Pydantic's powerful type checking and validation
 - 💾 File-based: Store your settings in a JSON file for easy management
-- 🔄 Auto-reload: Automatically load settings from file
 - 💪 Flexible: Create, load, and save settings with ease
 
 ## Installation
@@ -33,7 +32,7 @@ class MyAppSettings(FileSettings):
     debug_mode: bool = False
     max_connections: int = Field(default=100, ge=1, le=1000)
 
-# Create settings
+# Create settings file with default values
 settings = MyAppSettings.create("./config")
 
 # Load existing settings
@@ -58,7 +57,6 @@ class MyAppSettings(FileSettings):
     app_name: str
     debug_mode: bool = False
     max_connections: int = Field(default=100, ge=1, le=1000)
-    api_key: str = Field(default="", validation_alias="MY_APP_API_KEY")
 ```
 
 ### Creating Settings
@@ -66,7 +64,11 @@ class MyAppSettings(FileSettings):
 To create a new settings file:
 
 ```python
+# Create settings (raises SettingsExistsError if file exists)
 settings = MyAppSettings.create("./config")
+
+# Create settings, overwriting if file already exists
+settings = MyAppSettings.create("./config", exists_ok=True)
 ```
 
 ### Loading Settings
@@ -74,7 +76,11 @@ settings = MyAppSettings.create("./config")
 To load existing settings:
 
 ```python
+# Load settings (raises SettingsNotFoundError if file doesn't exist)
 settings = MyAppSettings.load("./config")
+
+# Load settings, creating file with defaults if it doesn't exist
+settings = MyAppSettings.load("./config", create_if_missing=True)
 ```
 
 ### Saving Settings
@@ -96,6 +102,17 @@ if MyAppSettings.exists("./config"):
 ```
 
 ## Advanced Usage
+
+### Custom Filename
+
+By default, settings are stored in `settings.json`. You can customize the filename:
+
+```python
+class MyAppSettings(FileSettings):
+    __FILENAME__ = "app_config.json"
+    
+    app_name: str = "My App"
+```
 
 ### Environment Variables
 
@@ -124,9 +141,28 @@ class MyAppSettings(FileSettings):
         return v
 ```
 
-### Custom Exceptions
+### BaseSettings
 
-The library provides custom exceptions for better error handling:
+The library also exports `BaseSettings` with `validate_assignment=True` enabled, useful when you need validation without file storage:
+
+```python
+from pydantic_file_settings import BaseSettings
+
+class RuntimeConfig(BaseSettings):
+    debug: bool = False
+```
+
+## Exception Reference
+
+| Exception | Raised by | When |
+|-----------|-----------|------|
+| `SettingsError` | — | Base exception for all settings errors |
+| `SettingsNotFoundError` | `load()` | Settings file doesn't exist |
+| `SettingsExistsError` | `create()` | Settings file already exists (when `exists_ok=False`) |
+| `ValueError` | `load()` | Settings file contains invalid JSON or data |
+| `OSError` | `save()` | Failed to write settings file (e.g., permission denied) |
+
+### Error Handling Example
 
 ```python
 from pydantic_file_settings import (
@@ -136,14 +172,19 @@ from pydantic_file_settings import (
     SettingsExistsError,
 )
 
+# Handling load errors
 try:
     settings = MyAppSettings.load("./config")
 except SettingsNotFoundError:
     print("Settings file not found!")
+except ValueError:
+    print("Invalid settings data!")
+
+# Handling create errors
+try:
+    settings = MyAppSettings.create("./config")
 except SettingsExistsError:
     print("Settings file already exists!")
-except SettingsError:
-    print("General settings error!")
 ```
 
 ## Contributing
@@ -156,7 +197,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgements
 
-- [Pydantic](https://pydantic-docs.helpmanual.io/) for the awesome data validation library
+- [Pydantic](https://docs.pydantic.dev/) for the awesome data validation library
 - [Ruslan Iskov](https://github.com/ruslan-rv-ua) for creating and maintaining this project
 
 ---
