@@ -41,9 +41,12 @@ Repository = "https://github.com/ruslan-rv-ua/pydantic-file-settings.git"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.rye]
-managed = true
-dev-dependencies = []
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.8",
+    "mypy>=1.13",
+]
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -60,3 +63,20 @@ exclude = [
     "/.gitignore",
     "/.pre-commit-config.yaml",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.8"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
