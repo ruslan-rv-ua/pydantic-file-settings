@@ -2,10 +2,12 @@
 
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
 
+import pydantic_file_settings
 from pydantic_file_settings import (
     BaseSettings,
     FileSettings,
@@ -129,6 +131,13 @@ class TestFileSettingsLoad:
 
         assert "Invalid settings data" in str(exc_info.value)
 
+    def test_load_custom_filename(self, tmp_path: Path) -> None:
+        """Test load() with custom filename."""
+        CustomFilenameSettings.create(tmp_path)
+        settings = CustomFilenameSettings.load(tmp_path)
+        assert settings.value == "test"
+        assert (tmp_path / "custom_config.json").exists()
+
 
 class TestFileSettingsSave:
     """Tests for FileSettings.save() method."""
@@ -164,6 +173,16 @@ class TestFileSettingsSave:
         # Should be indented (pretty-printed)
         assert "\n" in content
         assert "  " in content  # 2-space indent
+
+    def test_save_raises_oserror_on_write_failure(self, tmp_path: Path) -> None:
+        """Test that save() raises OSError with custom message on write failure."""
+        settings = SimpleSettings.create(tmp_path)
+
+        with patch.object(Path, "write_text", side_effect=PermissionError("Access denied")):
+            with pytest.raises(OSError) as exc_info:
+                settings.save()
+
+            assert "Failed to save settings to" in str(exc_info.value)
 
 
 class TestFileSettingsExists:
@@ -238,3 +257,99 @@ class TestBaseSettings:
         settings = TestSettings()
         with pytest.raises(ValidationError):
             settings.value = "not an int"  # type: ignore
+
+
+class TestStringPaths:
+    """Tests for string path arguments."""
+
+    def test_exists_with_string_path(self, tmp_path: Path) -> None:
+        """Test exists() accepts string path."""
+        SimpleSettings.create(tmp_path)
+        assert SimpleSettings.exists(str(tmp_path)) is True
+
+    def test_exists_with_string_path_not_found(self, tmp_path: Path) -> None:
+        """Test exists() accepts string path when file doesn't exist."""
+        assert SimpleSettings.exists(str(tmp_path)) is False
+
+    def test_create_with_string_path(self, tmp_path: Path) -> None:
+        """Test create() accepts string path."""
+        settings = SimpleSettings.create(str(tmp_path))
+        assert settings.name == "default"
+        assert (tmp_path / "settings.json").exists()
+
+    def test_load_with_string_path(self, tmp_path: Path) -> None:
+        """Test load() accepts string path."""
+        SimpleSettings.create(tmp_path)
+        settings = SimpleSettings.load(str(tmp_path))
+        assert settings.name == "default"
+
+
+class TestEdgeCases:
+    """Tests for edge cases."""
+
+    def test_load_empty_json_uses_defaults(self, tmp_path: Path) -> None:
+        """Test that loading empty JSON {} uses default values."""
+        (tmp_path / "settings.json").write_text("{}", encoding="utf8")
+        settings = SimpleSettings.load(tmp_path)
+        assert settings.name == "default"
+        assert settings.count == 0
+        assert settings.enabled is True
+
+    def test_load_with_extra_fields_raises_error(self, tmp_path: Path) -> None:
+        """Test that extra fields in JSON raise ValueError."""
+        settings_data = {
+            "name": "test",
+            "count": 1,
+            "enabled": True,
+            "unknown_field": "should cause error",
+        }
+        (tmp_path / "settings.json").write_text(
+            json.dumps(settings_data), encoding="utf8"
+        )
+        with pytest.raises(ValueError) as exc_info:
+            SimpleSettings.load(tmp_path)
+        assert "Extra inputs are not permitted" in str(exc_info.value)
+
+    def test_unicode_values(self, tmp_path: Path) -> None:
+        """Test that unicode values are handled correctly."""
+        settings = SimpleSettings.create(tmp_path)
+        settings.name = "Привіт світ 🌍"
+        settings.save()
+
+        loaded = SimpleSettings.load(tmp_path)
+        assert loaded.name == "Привіт світ 🌍"
+
+    def test_settings_dir_is_resolved(self, tmp_path: Path) -> None:
+        """Test that _settings_dir contains resolved path after load."""
+        SimpleSettings.create(tmp_path)
+        settings = SimpleSettings.load(tmp_path)
+        assert settings._settings_dir == tmp_path.resolve()
+
+
+class TestModuleExports:
+    """Tests for module exports."""
+
+    def test_all_exports_are_accessible(self) -> None:
+        """Test that all items in __all__ are accessible from the module."""
+        expected_exports = [
+            "BaseSettings",
+            "FileSettings",
+            "SettingsError",
+            "SettingsNotFoundError",
+            "SettingsExistsError",
+        ]
+        for name in expected_exports:
+            assert hasattr(pydantic_file_settings, name)
+            assert name in pydantic_file_settings.__all__
+
+    def test_all_matches_actual_exports(self) -> None:
+        """Test that __all__ contains exactly the expected exports."""
+        expected = {
+            "BaseSettings",
+            "FileSettings",
+            "SettingsError",
+            "SettingsNotFoundError",
+            "SettingsExistsError",
+        }
+        assert set(pydantic_file_settings.__all__) == expected
+

@@ -1,4 +1,4 @@
-    """Manage your application settings storing them in JSON file."""
+"""Manage your application settings storing them in JSON file."""
 
 from pathlib import Path
 from typing import Self
