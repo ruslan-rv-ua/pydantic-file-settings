@@ -50,9 +50,6 @@ dev = [
     "mypy>=1.13",
 ]
 
-[tool.hatch.metadata]
-allow-direct-references = true
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/pydantic_file_settings"]
 
