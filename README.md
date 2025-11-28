@@ -198,7 +198,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgements
 
 - [Pydantic](https://docs.pydantic.dev/) for the awesome data validation library
-- [Ruslan Iskov](https://github.com/ruslan-rv-ua) for creating and maintaining this project
 
 ---
 
