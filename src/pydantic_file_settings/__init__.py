@@ -1,4 +1,4 @@
-"""Manage your application settings storing them in JSON file."""
+    """Manage your application settings storing them in JSON file."""
 
 from pathlib import Path
 from typing import Self
@@ -61,9 +61,7 @@ class FileSettings(BaseSettings):
         return (Path(settings_dir).resolve() / cls.__FILENAME__).exists()
 
     @classmethod
-    def create(
-        cls, settings_dir: str | Path, exists_ok: bool = False
-    ) -> Self:
+    def create(cls, settings_dir: str | Path, exists_ok: bool = False) -> Self:
         """
         Create a new settings file in the specified directory.
 
@@ -88,9 +86,7 @@ class FileSettings(BaseSettings):
         return settings
 
     @classmethod
-    def load(
-        cls, settings_dir: str | Path, create_if_missing: bool = False
-    ) -> Self:
+    def load(cls, settings_dir: str | Path, create_if_missing: bool = False) -> Self:
         """
         Load settings from a JSON file in the specified directory.
 
