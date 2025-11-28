@@ -27,7 +27,9 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = ["pydantic-settings>=2.3.4"]
+dependencies = [
+    "pydantic-settings>=2.8.1",
+]
 
 [project.urls]
 Homepage = "https://github.com/ruslan-rv-ua/pydantic-file-settings"
