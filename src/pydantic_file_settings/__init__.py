@@ -1,13 +1,11 @@
 """Manage your application settings storing them in JSON file."""
 
 from pathlib import Path
-from typing import Type, TypeVar, Union
+from typing import Self
 
 import pydantic_settings
-from pydantic import ConfigDict, PrivateAttr, ValidationError
-
-
-T = TypeVar("T", bound="FileSettings")
+from pydantic import PrivateAttr, ValidationError
+from pydantic_settings import SettingsConfigDict
 
 
 class SettingsError(Exception):
@@ -31,7 +29,7 @@ class SettingsExistsError(SettingsError):
 class BaseSettings(pydantic_settings.BaseSettings):
     """Base settings class with validate_assignment enabled."""
 
-    model_config = ConfigDict(validate_assignment=True)
+    model_config = SettingsConfigDict(validate_assignment=True)
 
 
 class FileSettings(BaseSettings):
@@ -50,34 +48,34 @@ class FileSettings(BaseSettings):
     __FILENAME__: str = "settings.json"
 
     @classmethod
-    def exists(cls, settings_dir: Union[str, Path]) -> bool:
+    def exists(cls, settings_dir: str | Path) -> bool:
         """
         Check if the settings file exists in the specified directory.
 
         Args:
-            settings_dir (Union[str, Path]): The directory to check for the settings file.
+            settings_dir: The directory to check for the settings file.
 
         Returns:
-            bool: True if the settings file exists, False otherwise.
+            True if the settings file exists, False otherwise.
         """
         return (Path(settings_dir).resolve() / cls.__FILENAME__).exists()
 
     @classmethod
     def create(
-        cls: Type[T], settings_dir: Union[str, Path], exists_ok: bool = False
-    ) -> T:
+        cls, settings_dir: str | Path, exists_ok: bool = False
+    ) -> Self:
         """
         Create a new settings file in the specified directory.
 
         Args:
-            settings_dir (Union[str, Path]): The directory to create the settings file in.
-            exists_ok (bool, optional): If True, don't raise an error if the file already exists. Defaults to False.
+            settings_dir: The directory to create the settings file in.
+            exists_ok: If True, don't raise an error if the file already exists.
 
         Returns:
-            T: An instance of the FileSettings class.
+            An instance of the FileSettings class.
 
         Raises:
-            SettingsExistsError: If the settings file already exists and exists_ok is False.
+            SettingsExistsError: If the file already exists and exists_ok is False.
         """
         settings_dir = Path(settings_dir).resolve()
         if not exists_ok and cls.exists(settings_dir):
@@ -91,20 +89,20 @@ class FileSettings(BaseSettings):
 
     @classmethod
     def load(
-        cls: Type[T], settings_dir: Union[str, Path], create_if_missing: bool = False
-    ) -> T:
+        cls, settings_dir: str | Path, create_if_missing: bool = False
+    ) -> Self:
         """
         Load settings from a JSON file in the specified directory.
 
         Args:
-            settings_dir (Union[str, Path]): The directory to load the settings file from.
-            create_if_missing (bool, optional): If True, create a new settings file if it doesn't exist. Defaults to False.
+            settings_dir: The directory to load the settings file from.
+            create_if_missing: If True, create a new settings file if it doesn't exist.
 
         Returns:
-            T: An instance of the FileSettings class with loaded settings.
+            An instance of the FileSettings class with loaded settings.
 
         Raises:
-            SettingsNotFoundError: If the settings file doesn't exist and create_if_missing is False.
+            SettingsNotFoundError: If the file doesn't exist.
             ValueError: If the settings file contains invalid data.
         """
         settings_dir = Path(settings_dir).resolve()
@@ -119,7 +117,7 @@ class FileSettings(BaseSettings):
         try:
             settings_object = cls.model_validate_json(json_data)
         except ValidationError as e:
-            raise ValueError(f"Invalid settings data: {e}")
+            raise ValueError(f"Invalid settings data: {e}") from e
         settings_object._settings_dir = settings_dir
         return settings_object
 
@@ -128,14 +126,14 @@ class FileSettings(BaseSettings):
         Save the current settings to the JSON file.
 
         Raises:
-            IOError: If there's an error while saving the settings file.
+            OSError: If there's an error while saving the settings file.
         """
         file_path = self._settings_dir / self.__FILENAME__
         try:
             file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_text(self.model_dump_json(indent=2), encoding="utf8")
-        except IOError as e:
-            raise IOError(f"Failed to save settings to {file_path}: {e}")
+        except OSError as e:
+            raise OSError(f"Failed to save settings to {file_path}: {e}") from e
 
 
 __all__ = [
