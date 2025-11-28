@@ -4,15 +4,34 @@ from pathlib import Path
 from typing import Type, TypeVar, Union
 
 import pydantic_settings
-from pydantic import PrivateAttr, ValidationError
+from pydantic import ConfigDict, PrivateAttr, ValidationError
 
 
 T = TypeVar("T", bound="FileSettings")
 
 
+class SettingsError(Exception):
+    """Base exception for pydantic-file-settings."""
+
+    pass
+
+
+class SettingsNotFoundError(SettingsError):
+    """Raised when settings file is not found."""
+
+    pass
+
+
+class SettingsExistsError(SettingsError):
+    """Raised when settings file already exists."""
+
+    pass
+
+
 class BaseSettings(pydantic_settings.BaseSettings):
-    class Config:
-        validate_assignment = True
+    """Base settings class with validate_assignment enabled."""
+
+    model_config = ConfigDict(validate_assignment=True)
 
 
 class FileSettings(BaseSettings):
@@ -58,11 +77,11 @@ class FileSettings(BaseSettings):
             T: An instance of the FileSettings class.
 
         Raises:
-            FileExistsError: If the settings file already exists and exists_ok is False.
+            SettingsExistsError: If the settings file already exists and exists_ok is False.
         """
         settings_dir = Path(settings_dir).resolve()
         if not exists_ok and cls.exists(settings_dir):
-            raise FileExistsError(
+            raise SettingsExistsError(
                 f"`{cls.__FILENAME__}` already exists in `{settings_dir}`"
             )
         settings = cls()
@@ -85,14 +104,14 @@ class FileSettings(BaseSettings):
             T: An instance of the FileSettings class with loaded settings.
 
         Raises:
-            FileNotFoundError: If the settings file doesn't exist and create_if_missing is False.
+            SettingsNotFoundError: If the settings file doesn't exist and create_if_missing is False.
             ValueError: If the settings file contains invalid data.
         """
         settings_dir = Path(settings_dir).resolve()
         if not cls.exists(settings_dir):
             if create_if_missing:
                 return cls.create(settings_dir)
-            raise FileNotFoundError(
+            raise SettingsNotFoundError(
                 f"`{cls.__FILENAME__}` not found in `{settings_dir}`"
             )
 
@@ -113,6 +132,16 @@ class FileSettings(BaseSettings):
         """
         file_path = self._settings_dir / self.__FILENAME__
         try:
+            file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_text(self.model_dump_json(indent=2), encoding="utf8")
         except IOError as e:
             raise IOError(f"Failed to save settings to {file_path}: {e}")
+
+
+__all__ = [
+    "BaseSettings",
+    "FileSettings",
+    "SettingsError",
+    "SettingsNotFoundError",
+    "SettingsExistsError",
+]
