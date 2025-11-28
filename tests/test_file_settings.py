@@ -465,9 +465,7 @@ class TestRequiredFields:
         assert settings.required_name == "test"
         assert settings.required_count == 42
 
-    def test_load_with_mixed_required_and_optional_fields(
-        self, tmp_path: Path
-    ) -> None:
+    def test_load_with_mixed_required_and_optional_fields(self, tmp_path: Path) -> None:
         """Test load() with both required and optional fields."""
 
         class MixedSettings(FileSettings):
