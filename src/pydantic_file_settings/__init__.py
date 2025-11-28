@@ -4,7 +4,8 @@ from pathlib import Path
 from typing import Type, TypeVar, Union
 
 import pydantic_settings
-from pydantic import ValidationError
+from pydantic import PrivateAttr, ValidationError
+
 
 T = TypeVar("T", bound="FileSettings")
 
@@ -25,7 +26,7 @@ class FileSettings(BaseSettings):
         __FILENAME__ (str): The name of the JSON file to store settings.
     """
 
-    _settings_dir: Path
+    _settings_dir: Path = PrivateAttr()
 
     __FILENAME__: str = "settings.json"
 
