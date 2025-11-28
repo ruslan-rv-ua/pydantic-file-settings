@@ -58,7 +58,7 @@ class MyAppSettings(FileSettings):
     app_name: str
     debug_mode: bool = False
     max_connections: int = Field(default=100, ge=1, le=1000)
-    api_key: str = Field(default="", env="MY_APP_API_KEY")
+    api_key: str = Field(default="", validation_alias="MY_APP_API_KEY")
 ```
 
 ### Creating Settings
@@ -99,11 +99,11 @@ if MyAppSettings.exists("./config"):
 
 ### Environment Variables
 
-Pydantic File Settings supports loading values from environment variables. Use the `env` parameter in `Field`:
+Pydantic File Settings supports loading values from environment variables. Use the `validation_alias` parameter in `Field`:
 
 ```python
 class MyAppSettings(FileSettings):
-    api_key: str = Field(default="", env="MY_APP_API_KEY")
+    api_key: str = Field(default="", validation_alias="MY_APP_API_KEY")
 ```
 
 ### Validation
@@ -111,16 +111,39 @@ class MyAppSettings(FileSettings):
 Leverage Pydantic's validation features:
 
 ```python
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 
 class MyAppSettings(FileSettings):
     port: int = Field(default=8000, ge=1024, le=65535)
     
-    @validator("port")
-    def port_must_be_even(cls, v):
+    @field_validator("port")
+    @classmethod
+    def port_must_be_even(cls, v: int) -> int:
         if v % 2 != 0:
             raise ValueError("Port must be an even number")
         return v
+```
+
+### Custom Exceptions
+
+The library provides custom exceptions for better error handling:
+
+```python
+from pydantic_file_settings import (
+    FileSettings,
+    SettingsError,
+    SettingsNotFoundError,
+    SettingsExistsError,
+)
+
+try:
+    settings = MyAppSettings.load("./config")
+except SettingsNotFoundError:
+    print("Settings file not found!")
+except SettingsExistsError:
+    print("Settings file already exists!")
+except SettingsError:
+    print("General settings error!")
 ```
 
 ## Contributing
