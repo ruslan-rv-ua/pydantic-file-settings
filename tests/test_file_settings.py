@@ -178,7 +178,9 @@ class TestFileSettingsSave:
         """Test that save() raises OSError with custom message on write failure."""
         settings = SimpleSettings.create(tmp_path)
 
-        with patch.object(Path, "write_text", side_effect=PermissionError("Access denied")):
+        with patch.object(
+            Path, "write_text", side_effect=PermissionError("Access denied")
+        ):
             with pytest.raises(OSError) as exc_info:
                 settings.save()
 
@@ -352,4 +354,3 @@ class TestModuleExports:
             "SettingsExistsError",
         }
         assert set(pydantic_file_settings.__all__) == expected
-
