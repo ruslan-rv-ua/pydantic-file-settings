@@ -1,6 +1,6 @@
 [project]
 name = "pydantic-file-settings"
-version = "0.0.1"
+version = "0.1.0"
 description = "Manage your application settings with Pydantic models, storing them in JSON file."
 authors = [{ name = "Ruslan Iskov", email = "ruslan.rv.ua@gmail.com" }]
 license = "MIT"
